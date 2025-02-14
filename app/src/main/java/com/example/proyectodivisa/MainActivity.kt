@@ -8,12 +8,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
 import com.example.proyectodivisa.api.RetrofitClient
 import com.example.proyectodivisa.database.AppDatabase
 import com.example.proyectodivisa.database.ExchangeRate
+import com.example.proyectodivisa.work.SyncWorker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.util.concurrent.TimeUnit
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -41,6 +45,19 @@ class MainActivity : ComponentActivity() {
                 Log.e("API_TEST", "Error: ${e.message}")
             }
         }
+
+        // Leer y mostrar los datos de la base de datos
+        CoroutineScope(Dispatchers.IO).launch {
+            val rates = database.exchangeRateDao().getAll()
+            Log.d("DATABASE_TEST", "Datos en la base de datos: ${rates.joinToString("\n")}")
+        }
+
+        // Programar la sincronización cada hora
+        val syncWorkRequest = PeriodicWorkRequestBuilder<SyncWorker>(
+            1, TimeUnit.HOURS // Intervalo de 1 hora
+        ).build()
+
+        WorkManager.getInstance(this).enqueue(syncWorkRequest)
 
         // Configuración de la interfaz de usuario (opcional por ahora)
         setContent {
