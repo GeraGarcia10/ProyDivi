@@ -78,4 +78,6 @@ dependencies {
 
     // Coroutines para manejar operaciones asíncronas
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3") // Usa la última versión
+
+    implementation("androidx.room:room-ktx:2.6.1")
 }

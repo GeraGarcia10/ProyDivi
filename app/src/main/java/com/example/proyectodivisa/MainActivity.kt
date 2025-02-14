@@ -9,6 +9,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import com.example.proyectodivisa.api.RetrofitClient
+import com.example.proyectodivisa.database.AppDatabase
+import com.example.proyectodivisa.database.ExchangeRate
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -17,12 +19,24 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Prueba temporal para verificar la conexión a la API
+        // Obtener la instancia de la base de datos
+        val database = AppDatabase.getDatabase(this)
+
+        // Prueba temporal para verificar la conexión a la API y guardar los datos
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 // Obtener los tipos de cambio desde la API
                 val response = RetrofitClient.instance.getExchangeRates()
                 Log.d("API_TEST", "Response: ${response.conversion_rates}")
+
+                // Convertir los datos de la API a una lista de ExchangeRate
+                val rates = response.conversion_rates.map { (currency, rate) ->
+                    ExchangeRate(currency, rate)
+                }
+
+                // Guardar los datos en la base de datos
+                database.exchangeRateDao().insertAll(rates)
+                Log.d("DATABASE_TEST", "Datos guardados correctamente")
             } catch (e: Exception) {
                 Log.e("API_TEST", "Error: ${e.message}")
             }
