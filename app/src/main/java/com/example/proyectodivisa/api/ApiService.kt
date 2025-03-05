@@ -3,11 +3,10 @@ package com.example.proyectodivisa.api
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET
-import retrofit2.http.Query
 
 // Interfaz que define las solicitudes a la API
 interface ApiService {
-    @GET("v6/e168862e33968d80f20e7b07/latest/USD") // Cambia YOUR_API_KEY por tu clave
+    @GET("v6/e168862e33968d80f20e7b07/latest/USD") // aqui va la clave de la API
     suspend fun getExchangeRates(): ExchangeRateResponse
 }
 

@@ -1,5 +1,6 @@
 package com.example.proyectodivisa
 
+import android.annotation.SuppressLint
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -32,6 +33,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 class MainActivity : ComponentActivity() {
@@ -68,6 +72,7 @@ class MainActivity : ComponentActivity() {
 
         WorkManager.getInstance(this).enqueue(syncWorkRequest)
 
+
         // Configuración de la interfaz de usuario
         setContent {
             Surface(
@@ -95,10 +100,18 @@ fun ExchangeRateList(exchangeRates: List<ExchangeRate>) {
         items(exchangeRates) { rate ->
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(text = "Moneda: ${rate.currency}")
-                Text(text = "Tipo de cambio: ${rate.rate}")
+                Text(text = "Tipo de cambio: ${"%.2f".format(rate.rate)}")
+                Text(text = "Última actualización: ${formatTimestamp(rate.timestamp)}")
             }
         }
     }
+}
+
+// Función para formatear el timestamp
+@SuppressLint("SimpleDateFormat")
+fun formatTimestamp(timestamp: Long): String {
+    val sdf = SimpleDateFormat("dd/MM/yy hh:mm a", Locale.getDefault())
+    return sdf.format(Date(timestamp))
 }
 
 // ViewModel para manejar los datos de la interfaz de usuario
