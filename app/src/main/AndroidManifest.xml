@@ -26,6 +26,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <provider
+            android:name=".provider.ExchangeRateProvider"
+            android:authorities="com.example.proyectodivisa.provider"
+            android:exported="true" />
+
     </application>
 
 </manifest>

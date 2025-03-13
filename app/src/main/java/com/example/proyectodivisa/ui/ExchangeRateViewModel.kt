@@ -23,7 +23,7 @@ class ExchangeRateViewModel(private val database: AppDatabase) : ViewModel() {
     private fun loadExchangeRates() {
         viewModelScope.launch { // Usar viewModelScope para corrutinas
             // Obtener los datos de la base de datos
-            val rates = database.exchangeRateDao().getAll()
+            val rates = database.exchangeRateDao().getAll() // Usar getAll, no getAllCursor
             _exchangeRates.value = rates
         }
     }

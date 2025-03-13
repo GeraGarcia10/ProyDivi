@@ -6,7 +6,7 @@ import retrofit2.http.GET
 
 // Interfaz que define las solicitudes a la API
 interface ApiService {
-    @GET("v6/e168862e33968d80f20e7b07/latest/USD") // aqui va la clave de la API
+    @GET("v6/5077eec3a7e06a6f424efe91/latest/USD") // aqui va la clave de la API
     suspend fun getExchangeRates(): ExchangeRateResponse
 }
 
