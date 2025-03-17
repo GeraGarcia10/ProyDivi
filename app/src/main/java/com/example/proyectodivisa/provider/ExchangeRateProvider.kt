@@ -43,11 +43,15 @@ class ExchangeRateProvider : ContentProvider() {
             EXCHANGE_RATE_BY_CURRENCY -> {
                 // Consulta para obtener el tipo de cambio de una moneda específica
                 val currency = uri.lastPathSegment ?: throw IllegalArgumentException("Moneda no especificada")
-                if (selectionArgs != null && selectionArgs.size == 2) {
+
+                // Verifica si se proporcionaron argumentos para el rango de fechas
+                if (selectionArgs != null && selectionArgs.size >= 2) {
                     try {
-                        // Consulta por rango de fechas
+                        // Obtén las fechas de inicio y fin desde selectionArgs
                         val startTime = selectionArgs[0].toLong()
                         val endTime = selectionArgs[1].toLong()
+
+                        // Realiza la consulta con el rango de fechas
                         database.exchangeRateDao().getExchangeRateByCurrencyAndDateRangeCursor(currency, startTime, endTime)
                     } catch (e: NumberFormatException) {
                         throw IllegalArgumentException("Formato de fecha inválido")

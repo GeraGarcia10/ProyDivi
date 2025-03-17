@@ -4,6 +4,9 @@
 
     <!-- Permiso para acceder a Internet -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <permission
+        android:name="com.example.proyectodivisa.permission.ACCESS_EXCHANGE_RATES"
+        android:protectionLevel="signature" />
 
     <application
         android:allowBackup="true"
@@ -30,7 +33,8 @@
         <provider
             android:name=".provider.ExchangeRateProvider"
             android:authorities="com.example.proyectodivisa.provider"
-            android:exported="true" />
+            android:exported="true"
+            android:permission="com.example.proyectodivisa.permission.ACCESS_EXCHANGE_RATES" />
 
     </application>
 

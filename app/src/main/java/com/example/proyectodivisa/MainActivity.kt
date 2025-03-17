@@ -1,5 +1,7 @@
 package com.example.proyectodivisa
 
+import ExchangeRateChart
+import com.example.proyectodivisa.ui.ExchangeRateViewModel
 import android.annotation.SuppressLint
 import android.app.DatePickerDialog
 import android.net.Uri
@@ -9,13 +11,13 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -40,6 +42,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -47,6 +50,7 @@ import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 class MainActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -94,61 +98,120 @@ class MainActivity : ComponentActivity() {
                 // Observar los cambios en los datos
                 val exchangeRates by viewModel.exchangeRates.collectAsState()
 
+                // Estado para la moneda seleccionada
+                var compareCurrency by remember { mutableStateOf("USD") }
+
+                // Función para manejar los datos cargados
+                val onDataLoaded: (List<ExchangeRate>) -> Unit = { rates ->
+                    viewModel.updateRates(rates) // Actualizar el ViewModel con los nuevos datos
+                }
+
+                // Función para manejar la selección de moneda
+                val onCurrencySelected: (String) -> Unit = { currency ->
+                    compareCurrency = currency
+                }
+
+                // Función para manejar la selección de rango de fechas
+                val onDateRangeSelected: (Long, Long) -> Unit = { start, end ->
+                    // Aquí puedes manejar el rango de fechas si es necesario
+                }
+
                 // Mostrar la lista de tipos de cambio
-                ExchangeRateList(exchangeRates)
+                ExchangeRateList(
+                    exchangeRates = exchangeRates,
+                    compareCurrency = compareCurrency,
+                    onDataLoaded = onDataLoaded,
+                    onCurrencySelected = onCurrencySelected,
+                    onDateRangeSelected = onDateRangeSelected
+                )
             }
         }
     }
 }
 
 @Composable
-fun ExchangeRateList(exchangeRates: List<ExchangeRate>) {
+fun ExchangeRateList(
+    exchangeRates: List<ExchangeRate>,
+    compareCurrency: String, // Moneda para comparar
+    onDataLoaded: (List<ExchangeRate>) -> Unit, // Callback para datos cargados
+    onCurrencySelected: (String) -> Unit, // Callback para selección de moneda
+    onDateRangeSelected: (Long, Long) -> Unit // Callback para selección de rango de fechas
+) {
     val context = LocalContext.current
     var startDate by remember { mutableStateOf<Long?>(null) }
     var endDate by remember { mutableStateOf<Long?>(null) }
 
-    Column {
-        Button(onClick = {
-            // Mostrar el DatePickerDialog para seleccionar la fecha de inicio
-            showDatePicker(context) { year, month, day ->
+    Column(modifier = Modifier.padding(16.dp)) {
+        // Selector de moneda
+        TextField(
+            value = compareCurrency,
+            onValueChange = { onCurrencySelected(it) }, // Actualizar la moneda seleccionada
+            label = { Text("Moneda") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        // Selectores de fecha
+        Button(
+            onClick = { showDatePicker(context) { year, month, day ->
                 val calendar = Calendar.getInstance()
                 calendar.set(year, month, day)
                 startDate = calendar.timeInMillis
-            }
-        }) {
+            } },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
+        ) {
             Text("Seleccionar fecha de inicio")
         }
 
-        Button(onClick = {
-            // Mostrar el DatePickerDialog para seleccionar la fecha de fin
-            showDatePicker(context) { year, month, day ->
+        Button(
+            onClick = { showDatePicker(context) { year, month, day ->
                 val calendar = Calendar.getInstance()
                 calendar.set(year, month, day)
                 endDate = calendar.timeInMillis
-            }
-        }) {
+            } },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
+        ) {
             Text("Seleccionar fecha de fin")
         }
 
-        Button(onClick = {
-            if (startDate != null && endDate != null) {
-                // Llamar a la función para consultar el ContentProvider
-                (context as? MainActivity)?.consultarContentProvider(startDate!!, endDate!!)
-            } else {
-                Log.d("ContentProvider", "Selecciona ambas fechas")
-            }
-        }) {
+        // Botón para consultar el ContentProvider
+        Button(
+            onClick = {
+                if (startDate != null && endDate != null) {
+                    (context as? MainActivity)?.consultarContentProvider(
+                        startDate!!,
+                        endDate!!,
+                        compareCurrency,
+                        compareCurrency, // Moneda base y moneda a comparar
+                        onDataLoaded = { data ->
+                            // Convertir los datos a ExchangeRate si es necesario
+                            val rates = data.flatMap { (currency, rates) ->
+                                rates.map { (timestamp, rate) ->
+                                    ExchangeRate(currency, rate, timestamp)
+                                }
+                            }
+                            onDataLoaded(rates) // Pasar los datos al callback
+                        }
+                    )
+                } else {
+                    Log.d("ContentProvider", "Selecciona ambas fechas")
+                }
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
+        ) {
             Text("Consultar ContentProvider")
         }
 
-        LazyColumn {
-            items(exchangeRates) { rate ->
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(text = "Moneda: ${rate.currency}")
-                    Text(text = "Tipo de cambio: ${"%.2f".format(rate.rate)}")
-                    Text(text = "Última actualización: ${formatTimestamp(rate.timestamp)}")
-                }
-            }
+        // Mostrar el gráfico
+        if (exchangeRates.isNotEmpty()) {
+            ExchangeRateChart(exchangeRates)
+        } else {
+            Text("No hay datos para mostrar", modifier = Modifier.padding(vertical = 16.dp))
         }
     }
 }
@@ -200,18 +263,31 @@ class ExchangeRateViewModel(private val database: AppDatabase) : ViewModel() {
     }
 }
 
+
+
 // Función para consultar el ContentProvider
-private fun MainActivity.consultarContentProvider(startTime: Long, endTime: Long) {
-    // Usar corrutinas para acceder a la base de datos en segundo plano
+private fun MainActivity.consultarContentProvider(
+    startTime: Long,
+    endTime: Long,
+    baseCurrency: String,
+    compareCurrency: String,
+    onDataLoaded: (Map<String, List<Pair<Long, Double>>>) -> Unit
+) {
     CoroutineScope(Dispatchers.IO).launch {
         try {
-            // URI para consultar el tipo de cambio de USD
-            val uri = Uri.parse("content://com.example.proyectodivisa.provider/exchange_rates/USD")
+            // Consultar la moneda base
+            val uriBase = Uri.parse("content://com.example.proyectodivisa.provider/exchange_rates/$baseCurrency")
+            val cursorBase = contentResolver.query(uriBase, null, null, arrayOf(startTime.toString(), endTime.toString()), null)
 
-            // Realizar la consulta al ContentProvider
-            val cursor = contentResolver.query(uri, null, null, arrayOf(startTime.toString(), endTime.toString()), null)
+            // Consultar la moneda a comparar
+            val uriCompare = Uri.parse("content://com.example.proyectodivisa.provider/exchange_rates/$compareCurrency")
+            val cursorCompare = contentResolver.query(uriCompare, null, null, arrayOf(startTime.toString(), endTime.toString()), null)
 
-            cursor?.use {
+            val data = mutableMapOf<String, List<Pair<Long, Double>>>()
+
+            // Procesar los datos de la moneda base
+            val baseData = mutableListOf<Pair<Long, Double>>()
+            cursorBase?.use {
                 val currencyIndex = it.getColumnIndex("currency")
                 val rateIndex = it.getColumnIndex("rate")
                 val timestampIndex = it.getColumnIndex("timestamp")
@@ -220,8 +296,34 @@ private fun MainActivity.consultarContentProvider(startTime: Long, endTime: Long
                     val currency = if (currencyIndex >= 0) it.getString(currencyIndex) else "Desconocido"
                     val rate = if (rateIndex >= 0) it.getDouble(rateIndex) else 0.0
                     val timestamp = if (timestampIndex >= 0) it.getLong(timestampIndex) else 0L
-                    Log.d("ContentProvider", "Moneda: $currency, Tipo de cambio: $rate, Fecha: ${formatTimestamp(timestamp)}")
+
+                    baseData.add(timestamp to rate)
+                    Log.d("ContentProvider", "Moneda base: $currency, Tipo de cambio: $rate, Fecha: ${formatTimestamp(timestamp)}")
                 }
+            }
+            data[baseCurrency] = baseData
+
+            // Procesar los datos de la moneda a comparar
+            val compareData = mutableListOf<Pair<Long, Double>>()
+            cursorCompare?.use {
+                val currencyIndex = it.getColumnIndex("currency")
+                val rateIndex = it.getColumnIndex("rate")
+                val timestampIndex = it.getColumnIndex("timestamp")
+
+                while (it.moveToNext()) {
+                    val currency = if (currencyIndex >= 0) it.getString(currencyIndex) else "Desconocido"
+                    val rate = if (rateIndex >= 0) it.getDouble(rateIndex) else 0.0
+                    val timestamp = if (timestampIndex >= 0) it.getLong(timestampIndex) else 0L
+
+                    compareData.add(timestamp to rate)
+                    Log.d("ContentProvider", "Moneda a comparar: $currency, Tipo de cambio: $rate, Fecha: ${formatTimestamp(timestamp)}")
+                }
+            }
+            data[compareCurrency] = compareData
+
+            // Pasar los datos al callback
+            withContext(Dispatchers.Main) {
+                onDataLoaded(data)
             }
         } catch (e: Exception) {
             Log.e("ContentProvider", "Error al consultar la base de datos: ${e.message}")
